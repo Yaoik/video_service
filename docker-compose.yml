@@ -1,25 +1,27 @@
 services:
   redis:
     image: redis:7
+    container_name: redis
     restart: always
     ports:
       - "6379:6379"
     networks:
       - app_network
-  db:
+  postgresql:
     image: postgres:13
+    container_name: postgresql
     restart: always
     ports:
       - "5432:5432"
     environment:
-      - POSTGRES_DB=postgres_name
-      - POSTGRES_USER=postgres_user
-      - POSTGRES_PASSWORD=postgres_password
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "postgres_user", "-d", "postgres_name"]
-      interval: 10s
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}", "-d", "${POSTGRES_DB}"]
+      interval: 30s
       retries: 5
-      timeout: 5s
+      timeout: 60s
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -27,29 +29,66 @@ services:
 
   django:
     build: .
+    container_name: django
     command: ["python", "manage.py", "runserver", "0.0.0.0:8000"]
     volumes:
       - .:/app
     ports:
       - "8000:8000"
     depends_on:
-      - db
+      - postgresql
       - redis
+      - minio
     environment:
-      - DB_HOST=db
-      - DB_PORT=5432
-      - DB_NAME=postgres_name
-      - DB_USER=postgres_user
-      - DB_PASSWORD=postgres_password
-      - DEBUG=1
+      DB_HOST: postgresql
+      DB_PORT: ${POSTGRES_PORT}
+      DB_NAME: ${POSTGRES_DB}
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DEBUG: ${DEBUG}
     networks:
       - app_network
   celery:
     build: .
+    container_name: celery
     command: ["celery", "-A", "core_app", "worker", "--loglevel=info"]
     depends_on:
       - django
       - redis
+    networks:
+      - app_network
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    restart: always
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${AWS_ACCESS_KEY_ID}
+      MINIO_ROOT_PASSWORD: ${AWS_SECRET_ACCESS_KEY}
+    entrypoint: >
+      /bin/sh -c '
+        isAlive() { curl -sf http://127.0.0.1:9000/minio/health/live; }
+        minio $0 "$@" --quiet & echo $! > /tmp/minio.pid
+        while ! isAlive; do sleep 0.1; done
+        mc alias set minio http://127.0.0.1:9000 ${AWS_ACCESS_KEY_ID} ${AWS_SECRET_ACCESS_KEY}
+        mc mb minio/static || true
+        mc mb minio/media || true
+        mc anonymous set public minio/static
+        mc anonymous set public minio/media
+        kill -s INT $(cat /tmp/minio.pid) && rm /tmp/minio.pid
+        while isAlive; do sleep 0.1; done
+        exec minio $0 "$@"
+      '
+    command: server --console-address :9001 /data
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://127.0.0.1:9000/minio/health/live']
+      interval: 30s
+      start_interval: 3s
+      start_period: 30s
     networks:
       - app_network
 
@@ -58,3 +97,4 @@ networks:
 
 volumes:
   postgres_data:
+  minio_data:

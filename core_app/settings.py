@@ -22,8 +22,6 @@ CORS_ALLOW_HEADERS = [
     '*',
 ]
 
-# Application definition
-
 DJANGO_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -39,6 +37,7 @@ THIRD_PARTY_APPS = [
     'drf_spectacular',
     'django_extensions',
     'rest_framework_simplejwt',
+    'storages',
 ]
 
 INSTALLED_APPS = [
@@ -89,11 +88,11 @@ WSGI_APPLICATION = 'core_app.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('DB_NAME', default='postgres_name'),
-        'USER': os.getenv('DB_USER', default='postgres_user'),
-        'PASSWORD': os.getenv('DB_PASSWORD', default='postgres_password'),
-        'HOST': os.getenv('DB_HOST', default='localhost'),
-        'PORT': os.getenv('DB_PORT', default='5432'),
+        'NAME': os.getenv('POSTGRES_DB', default='postgres_name'),
+        'USER': os.getenv('POSTGRES_USER', default='postgres_user'),
+        'PASSWORD': os.getenv('POSTGRES_PASSWORD', default='postgres_password'),
+        'HOST': os.getenv('POSTGRES_HOST', default='localhost'),
+        'PORT': os.getenv('POSTGRES_PORT', default='5432'),
         'OPTIONS': {
             'client_encoding': 'UTF8',
         },
@@ -130,12 +129,6 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 
 USE_TZ = True
-
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.1/howto/static-files/
-
-STATIC_URL = 'static/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
@@ -210,5 +203,30 @@ SIMPLE_JWT = {
     'TOKEN_TYPE_CLAIM': 'token_type',
 }
 
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_ROOT = None
+
+STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "static"
+
+STORAGES = {
+    "default": {
+        "BACKEND": "common.storages.UploadedFilesStorage",
+        "OPTIONS":{
+            "access_key": os.getenv("AWS_ACCESS_KEY_ID", "minioadmin"),
+            "secret_key": os.getenv("AWS_SECRET_ACCESS_KEY", "minioadmin"),
+            "endpoint_url":"http://minio:9000",
+            'bucket_name':'media',
+            'use_ssl': not DEBUG,
+        },
+    },
+    "staticfiles": {
+        "BACKEND": "common.storages.StaticFilesStorage",
+        "OPTIONS":{
+            "access_key": os.getenv("AWS_ACCESS_KEY_ID", "minioadmin"),
+            "secret_key": os.getenv("AWS_SECRET_ACCESS_KEY", "minioadmin"),
+            "endpoint_url":"http://minio:9000",
+            'bucket_name':'static',
+            'use_ssl': not DEBUG,
+        },
+    },
+}
