@@ -7,7 +7,7 @@ cp .env.template .env
 2. Запустите приложение
 
 ```bash
-docker-compose up
+docker-compose up --build
 ```
 3. Выполните миграцию базы данных
 ```bash

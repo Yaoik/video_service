@@ -2,6 +2,7 @@ from common.models import Timestamped
 from django.db import models
 import uuid
 from users.models import User
+from .choices import VideoStatus
 
 class Video(Timestamped):
     user = models.ForeignKey(
@@ -14,12 +15,22 @@ class Video(Timestamped):
         default=uuid.uuid4, unique=True, db_index=True, editable=False
     )
     video = models.FileField(
-        upload_to='videos/'
+        upload_to='videos/',
+        null=True,
+        blank=False,
     )
     name = models.CharField(max_length=255)
-    video_size = models.BigIntegerField()
-    video_duration = models.BigIntegerField()
     
+    hls_playlist = models.URLField(blank=True, null=True)
+    status = models.CharField(
+        max_length=20,
+        choices=VideoStatus.choices,
+        default=VideoStatus.UPLOADING
+    )
+    
+    # Устанавливается только celery
+    video_size = models.BigIntegerField(default=0)
+    video_duration = models.BigIntegerField(default=0)
     
     def __str__(self):
         return f'<File {self.name}>'
