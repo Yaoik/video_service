@@ -47,6 +47,8 @@ INSTALLED_APPS = [
     'users',
     'user_auth',
     'uploads',
+    'hls',
+    'video_configs',
 ]
 
 MIDDLEWARE = [

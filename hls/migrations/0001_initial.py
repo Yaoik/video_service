@@ -13,22 +13,17 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='Video',
+            name='HLSVideo',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True, null=True)),
                 ('uuid', models.UUIDField(db_index=True, default=uuid.uuid4, editable=False, unique=True)),
-                ('video_file', models.FileField(upload_to='videos/%Y/%m/%d/')),
-                ('size', models.PositiveBigIntegerField(default=0)),
-                ('duration', models.PositiveBigIntegerField(default=0)),
-                ('width', models.PositiveSmallIntegerField(default=0)),
-                ('height', models.PositiveSmallIntegerField(default=0)),
-                ('bitrate', models.PositiveIntegerField(default=0)),
+                ('url', models.URLField()),
             ],
             options={
-                'verbose_name': 'Video',
-                'verbose_name_plural': 'Videos',
+                'verbose_name': 'HLS_video',
+                'verbose_name_plural': 'HLS_videos',
             },
         ),
     ]

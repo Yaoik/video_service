@@ -6,18 +6,15 @@ from .models import Video
 from .serializers import VideoSerializer
 from rest_framework.viewsets import GenericViewSet
 from rest_framework.permissions import IsAuthenticated
-from .tasks import process_video
 
-class VideoView(
-        GenericViewSet,
-        mixins.ListModelMixin, 
-        mixins.CreateModelMixin, 
-        mixins.RetrieveModelMixin,
-    ):
-    queryset = Video.objects.all()
-    serializer_class = VideoSerializer
-    permission_classes = [IsAuthenticated]
 
-    def perform_create(self, serializer: VideoSerializer):
-        video = serializer.save(user=self.request.user)
-        process_video.delay(video.id)
+
+#class VideoView(
+#        GenericViewSet,
+#        mixins.ListModelMixin, 
+#        mixins.CreateModelMixin, 
+#        mixins.RetrieveModelMixin,
+#    ):
+#    queryset = Video.objects.all()
+#    serializer_class = VideoSerializer
+#    permission_classes = [IsAuthenticated]
