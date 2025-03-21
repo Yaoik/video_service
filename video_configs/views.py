@@ -13,19 +13,23 @@ from rest_framework.permissions import IsAuthenticated
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from hls.tasks import process_video
-
+from .filters import VideoConfigFilter
 
 
 class VideoConfigViewSet(viewsets.ModelViewSet):
     queryset = VideoConfig.objects.all()
     serializer_class = VideoConfigSerializer
     permission_classes = [IsAuthenticated]
+    filterset_class = VideoConfigFilter
+    search_fields = ['title', ]
+    ordering_fields = ['created_at', 'updated_at', 'video__size', 'video__duration']
+    ordering = ['-created_at']
     
     lookup_field = 'uuid'
     lookup_url_kwarg = 'uuid'
     
     def get_queryset(self):
-        return VideoConfig.objects.filter(user=self.request.user)
+        return VideoConfig.objects.filter(user=self.request.user).prefetch_related('video__hls_videos')
 
     def perform_create(self, serializer:VideoConfigSerializer):
         serializer.save(user=self.request.user)
