@@ -9,11 +9,12 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+
 class HLSVideo(Timestamped):
-    video = models.ForeignKey(
+    video = models.OneToOneField(
             Video,
             on_delete=models.CASCADE,
-            related_name="hls_videos",
+            related_name="hls_video",
     )
     uuid = models.UUIDField(
         default=uuid.uuid4, unique=True, db_index=True, editable=False
@@ -24,9 +25,6 @@ class HLSVideo(Timestamped):
         choices=HSLStatus.choices,
         default=HSLStatus.PROCESSING,
     )
-    width = models.PositiveSmallIntegerField()
-    height = models.PositiveSmallIntegerField()
-    
     
     class Meta:
         verbose_name = "HLS_video"

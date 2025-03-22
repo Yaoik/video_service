@@ -3,7 +3,7 @@ from .models import Video
 from hls.serializers import HLSVideoSerializer
 
 class VideoSerializer(serializers.ModelSerializer):
-    hls_videos = HLSVideoSerializer(many=True, read_only=True)
+    hls_video = HLSVideoSerializer(many=False, read_only=True)
 
     class Meta:
         model = Video
@@ -22,7 +22,7 @@ class VideoSerializer(serializers.ModelSerializer):
             'sample_rate', 
             'channels', 
             'audio_bitrate', 
-            'hls_videos',
+            'hls_video',
         )
         read_only_fields = (
             'size', 

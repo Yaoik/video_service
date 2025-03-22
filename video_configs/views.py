@@ -29,7 +29,7 @@ class VideoConfigViewSet(viewsets.ModelViewSet):
     lookup_url_kwarg = 'uuid'
     
     def get_queryset(self):
-        return VideoConfig.objects.filter(user=self.request.user).prefetch_related('video__hls_videos')
+        return VideoConfig.objects.filter(user=self.request.user).prefetch_related('video__hls_video')
 
     def perform_create(self, serializer:VideoConfigSerializer):
         serializer.save(user=self.request.user)

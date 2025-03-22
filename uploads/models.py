@@ -63,8 +63,7 @@ class Video(Timestamped):
         if self.video_file and default_storage.exists(self.video_file.name):
             default_storage.delete(self.video_file.name)
 
-        hls_videos: QuerySet = self.hls_videos # type: ignore
-        for hls_video in hls_videos.all():
-            hls_video.delete()
-
+        if hasattr(self,'hls_video'):
+            self.hls_video.delete() # type: ignore
+            
         super().delete(*args, **kwargs)
