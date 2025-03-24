@@ -50,7 +50,27 @@ services:
   celery:
     build: .
     container_name: celery
-    command: ["celery", "-A", "core_app", "worker", "--loglevel=info"]
+    command: ["celery", "-A", "core_app", "worker", "--loglevel=info", "--concurrency=1", "-Q", "celery"]
+    depends_on:
+      - django
+      - redis
+      - postgresql
+    networks:
+      - app_network
+  celery-parser:
+    build: .
+    container_name: celery-parser
+    command: ["celery", "-A", "core_app", "worker", "--loglevel=info", "--concurrency=1", "-Q", "parser_queue"]
+    depends_on:
+      - django
+      - redis
+      - postgresql
+    networks:
+      - app_network
+  celery-beat:
+    build: .
+    container_name: celery-beat
+    command: ["celery", "-A", "core_app", "beat", "--loglevel=info"]
     depends_on:
       - django
       - redis

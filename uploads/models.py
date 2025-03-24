@@ -1,21 +1,21 @@
 from common.models import Timestamped
 from django.db import models
 import uuid
-from video_configs.models import VideoConfig
 from django.core.files.storage import default_storage
-from django.db.models import QuerySet
+from titles.models import Title
 from datetime import datetime
-from ffmpeg import FFmpeg
 import json
 import logging
 
 logger = logging.getLogger(__name__)
 
 class Video(Timestamped):
-    profile = models.OneToOneField(
-        VideoConfig, 
-        on_delete=models.CASCADE, 
-        related_name='video',
+    title = models.ForeignKey(
+        Title, 
+        on_delete=models.SET_NULL,
+        null=True, 
+        blank=True, 
+        related_name='episodes',
     )
     uuid = models.UUIDField(
         default=uuid.uuid4, unique=True, db_index=True, editable=False
@@ -31,6 +31,8 @@ class Video(Timestamped):
     video_file = models.FileField(
         upload_to=video_upload_path,
     )
+    
+    moderated = models.BooleanField(default=True)
     
     # Основные метаданные
     size = models.PositiveBigIntegerField(default=0)          # Размер в байтах
@@ -55,7 +57,7 @@ class Video(Timestamped):
         verbose_name_plural = "Videos"
         
     def __str__(self):
-        return f"<Video {self.profile.title}>"
+        return f"<Video {self.uuid}>"
     
     def delete(self, *args, **kwargs) -> None:
         logger.info(f'{self.video_file=}')
@@ -64,6 +66,7 @@ class Video(Timestamped):
             default_storage.delete(self.video_file.name)
 
         if hasattr(self,'hls_video'):
+            logger.info(f'{self.hls_video=}') # type: ignore
             self.hls_video.delete() # type: ignore
             
         super().delete(*args, **kwargs)

@@ -19,5 +19,5 @@ urlpatterns += [
 urlpatterns += [
     path('api/', include('uploads.urls')),
     path('api/', include('user_auth.urls')),
-    path('api/', include('video_configs.urls')),
+    path('api/', include('titles.urls')),
 ]

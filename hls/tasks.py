@@ -21,7 +21,6 @@ def process_video(video_id: int):
         video_model: Video = Video.objects.get(id=video_id)
 
         video_file = video_model.video_file
-        logger.info(f'{type(video_file)=}')
         assert isinstance(video_file, FieldFile)
         metadata = get_video_metadata(video_file)
         
