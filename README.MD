@@ -7,17 +7,11 @@ cp .env.template .env
 2. Запустите приложение
 
 ```bash
-docker-compose up --build
+docker-compose down -v & docker-compose up --build
 ```
 3. Выполните миграцию базы данных
 ```bash
-docker-compose exec django ./manage.py migrate
-
-```
-4. Cоздайте администратора
-```bash
-docker-compose exec django ./manage.py createsuperuser
-
+docker-compose exec django python manage.py makemigrations & docker-compose exec django python manage.py migrate & docker-compose exec django python manage.py collectstatic --noinput & docker-compose exec django python manage.py createsuperuser --username admin --email admin@gmail.com --noinput
 ```
 5. Некоторые полезные страницы
    * Админка - http://localhost:8000/admin/
