@@ -4,12 +4,20 @@ import uuid
 from django.core.files.storage import default_storage
 from titles.models import Title
 from datetime import datetime
-import json
 import logging
+from users.models import User
+from rest_framework.serializers import ValidationError
 
 logger = logging.getLogger(__name__)
 
 class Video(Timestamped):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=False,
+        related_name='videos',
+    )
     title = models.ForeignKey(
         Title, 
         on_delete=models.SET_NULL,
@@ -20,6 +28,8 @@ class Video(Timestamped):
     uuid = models.UUIDField(
         default=uuid.uuid4, unique=True, db_index=True, editable=False
     )
+    episode_number = models.PositiveSmallIntegerField(null=True)
+    metadata = models.JSONField(null=True)
     
     def video_upload_path(self, filename: str) -> str:
         """
@@ -70,3 +80,14 @@ class Video(Timestamped):
             self.hls_video.delete() # type: ignore
             
         super().delete(*args, **kwargs)
+
+    def clean(self):
+        super().clean()
+        if self.title is not None and self.episode_number is None:
+            raise ValidationError(
+                {"episode_number": "Обязателен, если указан title"}
+            )
+        if self.title is None and self.episode_number is not None:
+            raise ValidationError(
+                {"episode_number": "Должен быть None, если title не указан"}
+            )

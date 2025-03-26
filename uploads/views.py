@@ -8,6 +8,10 @@ from .serializers import VideoSerializer
 from rest_framework.viewsets import GenericViewSet
 from rest_framework.permissions import IsAuthenticated
 from hls.tasks import process_video
+from rest_framework.serializers import ValidationError
+from .filters import VideoFilter
+import django_filters
+
 
 
 class VideoView(
@@ -17,21 +21,26 @@ class VideoView(
         mixins.RetrieveModelMixin,
         mixins.DestroyModelMixin,
     ):
-    queryset = Video.objects.all()
+    queryset = Video.objects.all().order_by('-id')
     serializer_class = VideoSerializer
     permission_classes = [IsAuthenticated]
-    
-    def create(self, request:Request, *args, **kwargs):
-        serializer:VideoSerializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
 
-        video:Video = serializer.save()
-        
-        if video.title is not None:
-            video.moderated = False
-            video.save(update_fields=['moderated'])
-        
+    filterset_class = VideoFilter
+    filter_backends = [django_filters.rest_framework.DjangoFilterBackend]
+    
+    def perform_create(self, serializer:VideoSerializer):
+        validated_data = serializer.validated_data
+        assert isinstance(validated_data, dict)
+        title = validated_data.get('title')
+        moderated = title is not None
+
+        video = serializer.save(
+            user=self.request.user,
+            moderated=moderated,
+        )
+
         process_video.delay(video.id)
         
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+    def create(self, request, *args, **kwargs):
+        response = super().create(request, *args, **kwargs)
+        return response

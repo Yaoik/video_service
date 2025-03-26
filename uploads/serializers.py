@@ -2,6 +2,9 @@ from rest_framework import serializers
 from .models import Video
 from hls.serializers import HLSVideoSerializer
 from titles.models import Title
+from users.serializer import UserSerializer
+
+
 
 class VideoSerializer(serializers.ModelSerializer):
     hls_video = HLSVideoSerializer(many=False, read_only=True)
@@ -11,13 +14,18 @@ class VideoSerializer(serializers.ModelSerializer):
             required=False,
             allow_null=True,
         )
-
+    user = UserSerializer(many=False, read_only=True)
+    
     class Meta:
         model = Video
         fields = (
             'title',
+            'user',
             'video_file',
             'moderated',
+            
+            'episode_number',
+            'metadata',
             
             'size', 
             'duration', 
