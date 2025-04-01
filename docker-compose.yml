@@ -123,26 +123,7 @@ services:
       start_period: 30s
     networks:
       - app_network
-  tusd:
-    image: tusproject/tusd:latest
-    container_name: tusd
-    user: root
-    command: >
-      -hooks-http=http://django:8000/api/tusd/
-      -hooks-enabled-events=pre-create,post-finish
-      -base-path=/api/videos/files/uploads/
-      -hooks-http-forward-headers=Authorization
-      -upload-dir=/uploads/tusd/
-      -verbose
-    ports:
-      - "1234:8080"
-    volumes:
-      - tusd-uploads:/uploads/tusd/
-    depends_on:
-      - django
-    networks:
-      - app_network
-      
+
 networks:
   app_network:
 

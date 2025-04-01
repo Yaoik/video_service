@@ -13,8 +13,9 @@ import django_filters
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.views import APIView
 import logging
-from django.core.files.storage import default_storage
-
+from datetime import datetime
+import uuid
+        
 logger = logging.getLogger(__name__)
 
 class VideoView(
@@ -65,12 +66,10 @@ class TUSDVideoVidew(APIView):
         if not metadata.get('filetype', '').startswith('video'):
             return Response({"error": "Only Video file"}, status=status.HTTP_400_BAD_REQUEST)
         
-        from datetime import datetime
-        import uuid
-        import json
-        
-        with open('json.json', 'w+', encoding='UTF-8') as f:
-            f.write(json.dumps(request.data, indent=4, ensure_ascii=False))
+        #import json
+        #
+        #with open('json.json', 'w+', encoding='UTF-8') as f:
+        #    f.write(json.dumps(request.data, indent=4, ensure_ascii=False))
             
         filename = metadata.get("filename", "unnamed")
         response = {
@@ -108,7 +107,7 @@ class TUSDVideoVidew(APIView):
             return Response({"error": "Filename not provided"}, status=status.HTTP_400_BAD_REQUEST)
 
         video_file = f"{storage.get('Path')}"
-
+        
         logger.info(f'{video_file=}')
 
         serializer = VideoSerializer(
