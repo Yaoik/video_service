@@ -29,7 +29,11 @@ services:
   django:
     build: .
     container_name: django
-    command: ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             python manage.py createsuperuser --username admin --email admin@gmail.com --noinput &&
+             python manage.py runserver 0.0.0.0:8000"
     volumes:
       - .:/app
     ports:
@@ -111,7 +115,30 @@ services:
       start_period: 30s
     networks:
       - app_network
-
+  tusd:
+    image: tusproject/tusd:latest
+    container_name: tusd
+    environment:
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=us-east-1
+    command: >
+      -disable-download
+      -s3-bucket=media
+      -s3-endpoint=http://minio:9000
+      -hooks-http=http://django:8000/api/tusd/
+      -hooks-enabled-events=pre-create,post-finish
+      -base-path=/api/videos/files/uploads/
+      -hooks-http-forward-headers=Authorization
+      -verbose
+    ports:
+      - "1234:8080"
+    depends_on:
+      - minio
+      - django
+    networks:
+      - app_network
+      
 networks:
   app_network:
 
