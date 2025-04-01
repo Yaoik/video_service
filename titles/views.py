@@ -5,7 +5,7 @@ from rest_framework.generics import mixins
 from .models import Title
 from .serializers import TitleSerializer
 from rest_framework.viewsets import GenericViewSet
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import AllowAny
 from .filters import TitleFilter
 import django_filters
 

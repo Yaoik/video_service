@@ -40,6 +40,7 @@ class Video(Timestamped):
 
     video_file = models.FileField(
         upload_to=video_upload_path,
+        max_length=255,
     )
     
     moderated = models.BooleanField(default=True)
@@ -70,13 +71,10 @@ class Video(Timestamped):
         return f"<Video {self.uuid}>"
     
     def delete(self, *args, **kwargs) -> None:
-        logger.info(f'{self.video_file=}')
-        logger.info(f'{self.video_file.name=}')
         if self.video_file and default_storage.exists(self.video_file.name):
             default_storage.delete(self.video_file.name)
 
         if hasattr(self,'hls_video'):
-            logger.info(f'{self.hls_video=}') # type: ignore
             self.hls_video.delete() # type: ignore
             
         super().delete(*args, **kwargs)
