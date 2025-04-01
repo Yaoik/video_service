@@ -75,8 +75,10 @@ class TUSDVideoVidew(APIView):
         filename = metadata.get("filename", "unnamed")
         response = {
             "ChangeFileInfo": {
-                "ID": f"videos/{datetime.now().strftime('%Y/%m/%d')}/{uuid.uuid4()}/{filename}",
-            },
+                "Storage":{
+                    "Path": f"./videos/{datetime.now().strftime('%Y/%m/%d')}/{uuid.uuid4()}/{filename}"
+                }
+            }
         }
         logger.info(f"{response=}")
         return Response(response, status=status.HTTP_200_OK)
@@ -84,7 +86,7 @@ class TUSDVideoVidew(APIView):
     def handle_post_finish(self, request: Request):
         """Обработка post-finish: создание объекта Video."""
 
-        #logger.info(f'{request.headers=}')
+        logger.info(f'{request.headers=}')
         #logger.info(f'{request.data=}')
         import json
         with open('json.json', 'w+', encoding='UTF-8') as f:
@@ -105,25 +107,22 @@ class TUSDVideoVidew(APIView):
         if not filename:
             return Response({"error": "Filename not provided"}, status=status.HTTP_400_BAD_REQUEST)
 
-        video_file = f"{storage.get('Key')}"
-        data = {
-            'video_file': video_file,
-        }
+        video_file = f"{storage.get('Path')}"
 
-        logger.info(f'{data=}')
+        logger.info(f'{video_file=}')
 
-        video:Video = Video()
-        video.video_file.name = video_file
-        video.user = request.user
-        title = metadata.get('title', None)
-        if title:
-            video.moderated = False
-            video.title = title
-        else:
-            video.moderated = True
-        if upload_size is not None:
-            video.size = upload_size
-        video.save()
+        serializer = VideoSerializer(
+            data={
+                'video_filename': video_file,
+                'metadata': metadata,
+                'size': upload_size,
+                **request.data,
+            },
+            context={'request': request}
+        )
+
+        serializer.is_valid(raise_exception=True)
+        video:Video = serializer.save()
         
         logger.info(f'Post-finish: Created video {video.uuid} for user {request.user}')
         process_video.delay(video.pk)

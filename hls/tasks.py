@@ -20,10 +20,9 @@ def process_video(video_id: int):
     try:
         video_model: Video = Video.objects.get(id=video_id)
 
-        video_file = video_model.video_file
+        video_file = video_model.video_file        
         assert isinstance(video_file, FieldFile)
         metadata = get_video_metadata(video_file)
-        
         Video.objects.filter(pk=video_model.pk).update(**metadata)
         
         video_streams = [
@@ -32,8 +31,9 @@ def process_video(video_id: int):
             {"resolution": "720x480", "bitrate": "1000k", "width": 720, "height": 480},
         ]
         
-        url = video_model.video_file.url
-        url = url.replace('127.0.0.1', 'minio')
+        #url = video_model.video_file.url
+        #url = url.replace('127.0.0.1', 'minio')
+        
         hls_base_path = f'videos/hls/{video_model.uuid}'
     
         hls_serializer = HLSVideoSerializer(
@@ -45,16 +45,16 @@ def process_video(video_id: int):
         hls_serializer.is_valid(raise_exception=True)
         hls:HLSVideo = hls_serializer.save()
         
+        source_video = video_file.name
         hls_path = f'{hls_base_path}/'
         hls_playlist_filename = 'livestream-%v.m3u8'
         master_pl_name = 'livestream.m3u8'
         with tempfile.TemporaryDirectory() as temp_dir:
             output_file = os.path.join(temp_dir, hls_playlist_filename)
-
             try:
                 ffmpeg = (
                     FFmpeg()
-                    .input(url)
+                    .input(source_video)
                     .output(
                         output_file,
                         {
@@ -118,23 +118,22 @@ def get_video_metadata(video_file:FieldFile) -> dict:
     Получает метаданные видео с использованием ffprobe.
     """
     try:
-        with tempfile.NamedTemporaryFile(delete=True, suffix='.mp4') as temp_file:
-            with default_storage.open(video_file.name, 'rb') as source_file:
-                temp_file.write(source_file.read())
-            temp_file.flush() 
-            file_path_to_process = temp_file.name
-
-            ffprobe_cmd = [
-                'ffprobe',
-                '-v', 'error',           # Уровень логирования
-                '-show_streams',         # Показать информацию о потоках
-                '-show_format',          # Показать информацию о формате
-                '-print_format', 'json', # Вывод в JSON
-                file_path_to_process     # Путь к файлу
-            ]
-            
-            result = subprocess.run(ffprobe_cmd, capture_output=True, text=True, check=True)
-            metadata_json = json.loads(result.stdout)
+        file_path_to_process = video_file.name
+        logger.info(f'{file_path_to_process=}')
+        if not os.path.exists(file_path_to_process):
+            raise FileNotFoundError(f"Video file not found: {file_path_to_process}")
+        
+        ffprobe_cmd = [
+            'ffprobe',
+            '-v', 'error',           # Уровень логирования
+            '-show_streams',         # Показать информацию о потоках
+            '-show_format',          # Показать информацию о формате
+            '-print_format', 'json', # Вывод в JSON
+            file_path_to_process     # Путь к файлу
+        ]
+        
+        result = subprocess.run(ffprobe_cmd, capture_output=True, text=True, check=True)
+        metadata_json = json.loads(result.stdout)
 
         video_stream = next((stream for stream in metadata_json['streams'] if stream['codec_type'] == 'video'), None)
         audio_stream = next((stream for stream in metadata_json['streams'] if stream['codec_type'] == 'audio'), None)

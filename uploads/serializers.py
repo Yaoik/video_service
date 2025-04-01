@@ -3,18 +3,20 @@ from .models import Video
 from hls.serializers import HLSVideoSerializer
 from titles.models import Title
 from users.serializer import UserSerializer
+from rest_framework.request import Request
 
 
 
 class VideoSerializer(serializers.ModelSerializer):
     hls_video = HLSVideoSerializer(many=False, read_only=True)
     title = serializers.SlugRelatedField(
-            slug_field='shikimori_id',
-            queryset=Title.objects.all(),
-            required=False,
-            allow_null=True,
-        )
+        slug_field='shikimori_id',
+        queryset=Title.objects.all(),
+        required=False,
+        allow_null=True,
+    )
     user = UserSerializer(many=False, read_only=True)
+    video_filename = serializers.CharField(write_only=True)
     
     class Meta:
         model = Video
@@ -23,10 +25,9 @@ class VideoSerializer(serializers.ModelSerializer):
             'user',
             'video_file',
             'moderated',
-            
+            'video_filename',
             'episode_number',
             'metadata',
-            
             'size', 
             'duration', 
             'width', 
@@ -42,6 +43,7 @@ class VideoSerializer(serializers.ModelSerializer):
             'hls_video',
         )
         read_only_fields = (
+            'video_file',
             'moderated',
             'size', 
             'duration', 
@@ -56,3 +58,30 @@ class VideoSerializer(serializers.ModelSerializer):
             'channels', 
             'audio_bitrate', 
         )
+    
+    def create(self, validated_data:dict):
+        request:Request = self.context.get('request', None)
+        video_filename = validated_data.pop('video_filename')
+        metadata:dict = validated_data.pop('metadata', {})
+        upload_size = validated_data.pop('size', None)
+        
+        video = Video(
+            user=request.user,
+            **validated_data
+        )
+        
+        video.video_file.name = video_filename
+        
+        title = metadata.get('title', None)
+        if title:
+            video.moderated = False
+            video.title = title
+        else:
+            video.moderated = True
+        
+        if upload_size is not None:
+            video.size = upload_size
+        
+        video.save()
+        
+        return video
