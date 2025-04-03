@@ -1,7 +1,6 @@
 from rest_framework import serializers
 from .models import Video
 from hls.serializers import HLSVideoSerializer
-from titles.models import Title
 from users.serializer import UserSerializer
 from rest_framework.request import Request
 
@@ -9,19 +8,12 @@ from rest_framework.request import Request
 
 class VideoSerializer(serializers.ModelSerializer):
     hls_video = HLSVideoSerializer(many=False, read_only=True)
-    title = serializers.SlugRelatedField(
-        slug_field='shikimori_id',
-        queryset=Title.objects.all(),
-        required=False,
-        allow_null=True,
-    )
     user = UserSerializer(many=False, read_only=True)
     video_filename = serializers.CharField(write_only=True)
     
     class Meta:
         model = Video
         fields = (
-            'title',
             'user',
             'video_file',
             'moderated',
@@ -72,12 +64,7 @@ class VideoSerializer(serializers.ModelSerializer):
         
         video.video_file.name = video_filename
         
-        title = metadata.get('title', None)
-        if title:
-            video.moderated = False
-            video.title = title
-        else:
-            video.moderated = True
+        video.moderated = False
         
         if upload_size is not None:
             video.size = upload_size

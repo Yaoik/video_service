@@ -49,7 +49,6 @@ INSTALLED_APPS = [
     'user_auth',
     'uploads',
     'hls',
-    'titles',
 ]
 
 MIDDLEWARE = [

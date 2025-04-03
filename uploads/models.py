@@ -2,11 +2,9 @@ from common.models import Timestamped
 from django.db import models
 import uuid
 from django.core.files.storage import default_storage
-from titles.models import Title
 from datetime import datetime
 import logging
 from users.models import User
-from rest_framework.serializers import ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -17,13 +15,6 @@ class Video(Timestamped):
         null=True,
         blank=False,
         related_name='videos',
-    )
-    title = models.ForeignKey(
-        Title, 
-        on_delete=models.SET_NULL,
-        null=True, 
-        blank=True, 
-        related_name='episodes',
     )
     uuid = models.UUIDField(
         default=uuid.uuid4, unique=True, db_index=True, editable=False
@@ -78,14 +69,3 @@ class Video(Timestamped):
             self.hls_video.delete() # type: ignore
             
         super().delete(*args, **kwargs)
-
-    def clean(self):
-        super().clean()
-        if self.title is not None and self.episode_number is None:
-            raise ValidationError(
-                {"episode_number": "Обязателен, если указан title"}
-            )
-        if self.title is None and self.episode_number is not None:
-            raise ValidationError(
-                {"episode_number": "Должен быть None, если title не указан"}
-            )
