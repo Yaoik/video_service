@@ -87,9 +87,9 @@ class TUSDVideoVidew(APIView):
 
         logger.info(f'{request.headers=}')
         #logger.info(f'{request.data=}')
-        import json
-        with open('json.json', 'w+', encoding='UTF-8') as f:
-            f.write(json.dumps(request.data, indent=4, ensure_ascii=False))
+        #import json
+        #with open('json.json', 'w+', encoding='UTF-8') as f:
+        #    f.write(json.dumps(request.data, indent=4, ensure_ascii=False))
         
         assert isinstance(request.data, dict)  
         event:dict = request.data.get('Event', {})

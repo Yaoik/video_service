@@ -19,7 +19,7 @@ def parser_queue():
                 data = jikan.top(type='anime', page=page)
                 return data
             except jikanpy.exceptions.APIException:
-                logger.warning(f"API rate limit hit on page {page}, retrying in 1s")
+                #logger.warning(f"API rate limit hit on page {page}, retrying in 1s")
                 time.sleep(1)
             except Exception as e:
                 logger.warning(f'{e=}')
@@ -31,7 +31,7 @@ def parser_queue():
             title = anime['titles'][0]['title']
             year = anime['year']
             description = anime['synopsis']
-            logger.info(f'Adding anime {shikimori_id=}')
+            #logger.info(f'Adding anime {shikimori_id=}')
             try:
                 Title.objects.update_or_create(
                     shikimori_id=shikimori_id,

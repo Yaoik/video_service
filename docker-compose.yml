@@ -19,7 +19,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}", "-d", "${POSTGRES_DB}"]
-      interval: 30s
+      interval: 10s
       retries: 5
       timeout: 60s
     volumes:
@@ -134,6 +134,7 @@ services:
       -hooks-http-forward-headers=Authorization
       -upload-dir=/uploads/tusd/
       -verbose
+      -max-size ${TUS_MAX_SIZE}
     ports:
       - "1234:8080"
     volumes:

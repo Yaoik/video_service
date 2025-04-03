@@ -23,18 +23,11 @@ def process_video(video_id: int):
         video_file = video_model.video_file        
         assert isinstance(video_file, FieldFile)
         metadata = get_video_metadata(video_file)
-        Video.objects.filter(pk=video_model.pk).update(**metadata)
-        
-        video_streams = [
-            {"resolution": "1920x1080", "bitrate": "5000k", "width": 1920, "height": 1080},
-            {"resolution": "1280x720", "bitrate": "2500k", "width": 1280, "height": 720},
-            {"resolution": "720x480", "bitrate": "1000k", "width": 720, "height": 480},
-        ]
-        
+        Video.objects.filter(pk=video_model.pk).update(**metadata)        
         #url = video_model.video_file.url
         #url = url.replace('127.0.0.1', 'minio')
         
-        hls_base_path = f'videos/hls/{video_model.uuid}'
+        dash_base_path = f'videos/dash/{video_model.uuid}'
     
         hls_serializer = HLSVideoSerializer(
             data={
@@ -46,11 +39,11 @@ def process_video(video_id: int):
         hls:HLSVideo = hls_serializer.save()
         
         source_video = video_file.name
-        hls_path = f'{hls_base_path}/'
-        hls_playlist_filename = 'livestream-%v.m3u8'
-        master_pl_name = 'livestream.m3u8'
-        with tempfile.TemporaryDirectory() as temp_dir:
-            output_file = os.path.join(temp_dir, hls_playlist_filename)
+        dash_init_segment = 'init_$RepresentationID$.$ext$'
+        dash_media_segment = 'segment_$RepresentationID$_$Number$.$ext$'
+        dash_manifest = 'stream.mpd'
+        with tempfile.TemporaryDirectory() as temp_dir: 
+            output_file = os.path.join(temp_dir, dash_manifest)
             try:
                 ffmpeg = (
                     FFmpeg()
@@ -58,45 +51,53 @@ def process_video(video_id: int):
                     .output(
                         output_file,
                         {
-                            'map': ['0:v:0', '0:a:0', '0:v:0', '0:a:0', '0:v:0', '0:a:0'],
+                            # Video processing using filter_complex for multiple resolutions
+                            "filter_complex": (
+                                "[0:v]scale=-2:144[v144];"
+                                "[0:v]scale=-2:480[v480];"
+                                "[0:v]scale=-2:1080[v1080]"
+                            ),
+                            # Map all streams
+                            #"map": ["[v144]", "[v480]", "[v1080]", "0:a?", "0:s?"],
+                            "map": ["[v144]", "[v480]", "[v1080]", "0:a?"],
+                            # Video codec settings
                             'c:v': 'libx264',
-                            'crf': '22',
-                            'c:a': 'aac',
-                            'ar': '44100',
-                            'filter:v:0': 'scale=w=480:h=360',
-                            'maxrate:v:0': '600k',
-                            'b:a:0': '500k',
-                            'filter:v:1': 'scale=w=640:h=480',
-                            'maxrate:v:1': '1500k',
-                            'b:a:1': '1000k',
-                            'filter:v:2': 'scale=w=1280:h=720',
-                            'maxrate:v:2': '3000k',
-                            'b:a:2': '2000k',
-                            'var_stream_map': 'v:0,a:0,name:360p v:1,a:1,name:480p v:2,a:2,name:720p',
-                            'preset': 'fast',
-                            'hls_list_size': '10',
-                            'threads': '0',
-                            'f': 'hls',
-                            'hls_time': '3',
-                            'hls_flags': 'independent_segments',
-                            'master_pl_name': master_pl_name,
-                            'y':None,
+                            "b:v:0": "600k",  # Bitrate for 144p
+                            "b:v:1": "1500k",  # Bitrate for 480p
+                            "b:v:2": "6000k",  # Bitrate for 1080p
+                            # Настройки аудио
+                            'c:a': 'aac', 
+                            'b:a': '128k',
+                            "disposition:a": "default",
+                            "map_metadata:s:a": "0:s:a",
+                            # Настройки субтитров
+                            'c:s': 'webvtt',
+                            # Настройки DASH
+                            'map_metadata': '0',
+                            'f': 'dash',
+                            'use_timeline': '1',
+                            'use_template': '1',
+                            'seg_duration': '3',
+                            #'adaptation_sets': "id=0,streams=v id=1,streams=a id=2,streams=s",
+                            'adaptation_sets': "id=0,streams=v id=1,streams=a",
+                            'init_seg_name': dash_init_segment,
+                            'media_seg_name': dash_media_segment,
+                            'y': None,
                         }
                     )
                 )
                 logger.info(' '.join(ffmpeg.arguments))
                 ffmpeg.execute()
-
                 for file_name in os.listdir(temp_dir):
                     local_path = os.path.join(temp_dir, file_name)
-                    minio_path = os.path.join(hls_path, file_name)
+                    minio_path = os.path.join(dash_base_path, file_name)
                     with open(local_path, 'rb') as file:
-                        logger.info(f'Uploading to MinIO: {minio_path}')
+                        #logger.info(f'Uploading to MinIO: {minio_path}')
                         saved_path = default_storage.save(minio_path, ContentFile(file.read()))
-                        logger.info(f'Uploaded as: {saved_path}')
-
+                        #logger.info(f'Uploaded as: {saved_path}')
+                
                 hls_playlist_url = default_storage.url(
-                    os.path.join(hls_path, master_pl_name)
+                    os.path.join(dash_base_path, dash_manifest)
                 )
                 logger.info(f'HLS playlist URL: {hls_playlist_url}')
                 
@@ -104,9 +105,12 @@ def process_video(video_id: int):
 
             except Exception as e:
                 HLSVideo.objects.filter(pk=hls.pk).update(status=HSLStatus.FAILED)
+                process = subprocess.run(ffmpeg.arguments, capture_output=True, text=True)
+                logger.error(f'FFmpeg stdout: {process.stdout}')
+                logger.error(f'FFmpeg stderr: {process.stderr}')
                 raise e
 
-        return "eeee"
+        return True
 
     except Video.DoesNotExist:
         return f"Видео с ID {video_id} не найдено"
@@ -134,7 +138,6 @@ def get_video_metadata(video_file:FieldFile) -> dict:
         
         result = subprocess.run(ffprobe_cmd, capture_output=True, text=True, check=True)
         metadata_json = json.loads(result.stdout)
-
         video_stream = next((stream for stream in metadata_json['streams'] if stream['codec_type'] == 'video'), None)
         audio_stream = next((stream for stream in metadata_json['streams'] if stream['codec_type'] == 'audio'), None)
 
