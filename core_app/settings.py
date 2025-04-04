@@ -18,9 +18,7 @@ ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", default="*").split(',')
 CSRF_COOKIE_DOMAIN = os.getenv("CSRF_COOKIE_DOMAIN", default="")
 CSRF_TRUSTED_ORIGINS = os.getenv("CSRF_TRUSTED_ORIGINS", default='http://127.0.0.1:8000').split(',')
 
-CORS_ALLOW_HEADERS = [
-    '*',
-]
+CORS_ALLOW_CREDENTIALS = True
 
 DJANGO_APPS = [
     'django.contrib.admin',
@@ -29,6 +27,7 @@ DJANGO_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sites',
 ]
 
 THIRD_PARTY_APPS = [
@@ -39,6 +38,15 @@ THIRD_PARTY_APPS = [
     'rest_framework_simplejwt',
     'storages',
     'django_filters',
+    
+    'allauth',
+    'allauth.account',
+    'allauth.headless',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
+    'allauth.usersessions',
+    
+    'rest_framework.authtoken',
 ]
 
 INSTALLED_APPS = [
@@ -59,6 +67,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'allauth.account.middleware.AccountMiddleware',
 ]
 if not DEBUG:
     MIDDLEWARE.append('django.middleware.csrf.CsrfViewMiddleware')
@@ -176,6 +185,7 @@ REST_FRAMEWORK = {
         'django_filters.rest_framework.DjangoFilterBackend',
     ),
     'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
@@ -244,4 +254,36 @@ STORAGES = {
             'use_ssl': not DEBUG,
         },
     },
+}
+#STORAGES['default']['OPTIONS']['endpoint_url'] = 'http://127.0.0.1:9000'
+#STORAGES['staticfiles']['OPTIONS']['endpoint_url'] = 'http://127.0.0.1:9000'
+
+# Oauth2
+SITE_ID = 1
+
+ACCOUNT_LOGIN_METHODS = {'email'}
+ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']
+ACCOUNT_EMAIL_VERIFICATION = 'none'
+HEADLESS_ONLY = True
+SOCIALACCOUNT_ONLY = True
+HEADLESS_CLIENTS=('browser',)
+HEADLESS_FRONTEND_URLS = {
+    "socialaccount_login_error": os.getenv('socialaccount_login_error', default="http://dtf-pet.net:8080/auth/"),
+}
+
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'APP': {
+            'client_id': os.getenv('GOOGLE_CLIENT_ID'),
+            'secret': os.getenv('GOOGLE_CLIENT_SECRET'),
+            'key': ''
+        },
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        }
+    }
 }

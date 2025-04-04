@@ -59,7 +59,7 @@ def process_video(video_id: int):
                             ),
                             # Map all streams
                             #"map": ["[v144]", "[v480]", "[v1080]", "0:a?", "0:s?"],
-                            "map": ["[v144]", "[v480]", "[v1080]", "0:a?"],
+                            "map": ["[v144]", "[v480]", "[v1080]", "0:a"],
                             # Video codec settings
                             'c:v': 'libx264',
                             "b:v:0": "600k",  # Bitrate for 144p
