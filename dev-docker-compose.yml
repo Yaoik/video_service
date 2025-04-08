@@ -1,0 +1,132 @@
+services:
+  redis:
+    image: redis:7
+    container_name: redis
+    restart: always
+    ports:
+      - "6379:6379"
+    networks:
+      - app_network
+  postgresql:
+    image: postgres:13
+    container_name: postgresql
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}", "-d", "${POSTGRES_DB}"]
+      interval: 10s
+      retries: 5
+      timeout: 60s
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app_network
+  django:
+    build: .
+    container_name: django
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             python manage.py createsuperuser --username admin --email admin@gmail.com --noinput &&
+             python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - .:/app
+      - tusd-uploads:/uploads/tusd/
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      minio:
+        condition: service_started
+    environment:
+      DB_HOST: postgresql
+      DB_PORT: ${POSTGRES_PORT}
+      DB_NAME: ${POSTGRES_DB}
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DEBUG: ${DEBUG}
+    networks:
+      - app_network
+  celery:
+    build: .
+    container_name: celery
+    user: root
+    volumes:
+      - tusd-uploads:/uploads/tusd/
+    command: ["celery", "-A", "core_app", "worker", "--loglevel=info", "--concurrency=1", "-Q", "celery"]
+    depends_on:
+      - django
+      - redis
+      - postgresql
+    networks:
+      - app_network
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    restart: always
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${AWS_ACCESS_KEY_ID}
+      MINIO_ROOT_PASSWORD: ${AWS_SECRET_ACCESS_KEY}
+    entrypoint: >
+      /bin/sh -c '
+        isAlive() { curl -sf http://127.0.0.1:9000/minio/health/live; }
+        minio $0 "$@" --quiet & echo $! > /tmp/minio.pid
+        while ! isAlive; do sleep 0.1; done
+        mc alias set minio http://127.0.0.1:9000 ${AWS_ACCESS_KEY_ID} ${AWS_SECRET_ACCESS_KEY}
+        mc mb minio/static || true
+        mc mb minio/media || true
+        mc anonymous set public minio/static
+        mc anonymous set public minio/media
+        kill -s INT $(cat /tmp/minio.pid) && rm /tmp/minio.pid
+        while isAlive; do sleep 0.1; done
+        exec minio $0 "$@"
+      '
+    command: server --console-address :9001 /data
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://127.0.0.1:9000/minio/health/live']
+      interval: 30s
+      start_interval: 3s
+      start_period: 30s
+    networks:
+      - app_network
+  tusd:
+    image: tusproject/tusd:latest
+    container_name: tusd
+    user: root
+    command: >
+      -hooks-http=http://django:8000/api/tusd/
+      -hooks-enabled-events=pre-create,post-finish
+      -base-path=/api/videos/files/uploads/
+      -hooks-http-forward-headers=Authorization
+      -upload-dir=/uploads/tusd/
+      -verbose
+      -max-size ${TUS_MAX_SIZE}
+    ports:
+      - "1234:8080"
+    volumes:
+      - tusd-uploads:/uploads/tusd/
+    depends_on:
+      - django
+    networks:
+      - app_network
+      
+networks:
+  app_network:
+
+volumes:
+  tusd-uploads:
+  postgres_data:
+  minio_data:

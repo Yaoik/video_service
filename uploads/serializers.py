@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import Video
 from hls.serializers import HLSVideoSerializer
-from users.serializer import UserSerializer
+from users.serializers import UserSerializer
 from rest_framework.request import Request
 
 

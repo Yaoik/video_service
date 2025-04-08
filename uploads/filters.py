@@ -8,7 +8,7 @@ class VideoFilter(django_filters.FilterSet):
 
     class Meta:
         model = Video
-        fields = []
+        fields = ['user']
     
     def filter_metadata(self, queryset:QuerySet[Video], name:str, value:str):
         # value приходит в формате "key:value"
