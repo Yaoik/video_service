@@ -53,17 +53,17 @@ def process_video(video_id: int):
                         {
                             # Video processing using filter_complex for multiple resolutions
                             "filter_complex": (
-                                "[0:v]scale=-2:144[v144];"
-                                "[0:v]scale=-2:480[v480];"
-                                "[0:v]scale=-2:1080[v1080]"
+                                "[0:v]scale=256:144[v144];"
+                                #"[0:v]scale=854:480[v480];"
+                                "[0:v]scale=1920:1080[v1080]"
                             ),
                             # Map all streams
                             #"map": ["[v144]", "[v480]", "[v1080]", "0:a?", "0:s?"],
-                            "map": ["[v144]", "[v480]", "[v1080]", "0:a"],
+                            "map": ["[v144]", "[v1080]", "0:a"],
                             # Video codec settings
                             'c:v': 'libx264',
                             "b:v:0": "600k",  # Bitrate for 144p
-                            "b:v:1": "1500k",  # Bitrate for 480p
+                            #"b:v:1": "1500k",  # Bitrate for 480p
                             "b:v:2": "6000k",  # Bitrate for 1080p
                             # Настройки аудио
                             'c:a': 'aac', 

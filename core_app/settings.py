@@ -36,6 +36,7 @@ THIRD_PARTY_APPS = [
     'drf_spectacular',
     'django_extensions',
     'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
     'storages',
     'django_filters',
     
@@ -216,7 +217,7 @@ CELERY_RESULT_EXPIRES = 60 * 60
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60) if not DEBUG else timedelta(minutes=600),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
-    'ROTATE_REFRESH_TOKENS': False,
+    'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
     'ALGORITHM': 'HS256',
     'SIGNING_KEY': SECRET_KEY,
@@ -268,7 +269,7 @@ HEADLESS_ONLY = True
 SOCIALACCOUNT_ONLY = True
 HEADLESS_CLIENTS=('browser',)
 HEADLESS_FRONTEND_URLS = {
-    "socialaccount_login_error": os.getenv('socialaccount_login_error', default="http://dtf-pet.net:8080/auth/"),
+    "socialaccount_login_error": os.getenv('socialaccount_login_error', default="http://26.132.214.251:80/auth/"),
 }
 
 SOCIALACCOUNT_PROVIDERS = {
