@@ -13,15 +13,7 @@ docker-compose down -v & docker-compose up --build
 ```bash
 docker-compose exec django python manage.py makemigrations & docker-compose exec django python manage.py migrate & docker-compose exec django python manage.py collectstatic --noinput & docker-compose exec django python manage.py createsuperuser --username admin --email admin@gmail.com --noinput
 ```
-4. Запускаем парсер
-```bash
-docker-compose exec django python manage.py shell_plus
-```
-```bash
-from titles.tasks import parser_queue
-parser_queue.apply_async(queue='parser_queue')
-```
-5. Некоторые полезные страницы
+4. Некоторые полезные страницы
    * Админка - http://localhost:8000/admin/
    * API документация
      * Swagger - http://localhost:8000/api/schema/swagger-ui/
